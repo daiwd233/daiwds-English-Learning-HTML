@@ -746,9 +746,9 @@ const MODULES = {
   ky: { name: '考研英语', label: '全国硕士研究生英语 · 每日 100 词', key: 'eng_learn_ky' },
 };
 function loadVocab(mod) {
-  if (mod === 'cet4') return Array.isArray(WORDS_DATA_CET4) ? WORDS_DATA_CET4 : [];
-  if (mod === 'cet6') return Array.isArray(WORDS_DATA_CET6) ? WORDS_DATA_CET6 : [];
-  if (mod === 'ky') return Array.isArray(WORDS_DATA_KY) ? WORDS_DATA_KY : [];
+  if (mod === 'cet4' && typeof WORDS_DATA_CET4 !== 'undefined') return WORDS_DATA_CET4;
+  if (mod === 'cet6' && typeof WORDS_DATA_CET6 !== 'undefined') return WORDS_DATA_CET6;
+  if (mod === 'ky' && typeof WORDS_DATA_KY !== 'undefined') return WORDS_DATA_KY;
   return [];
 }
 let currentModule = 'cet6';
@@ -1392,6 +1392,10 @@ function switchModule(mod) {
   currentModule = mod;
   saveModulePref();
   VOCABULARY = loadVocab(mod);
+  if (!Array.isArray(VOCABULARY) || VOCABULARY.length === 0) {
+    showToast('词库加载失败: ' + MODULES[mod].name, 'info');
+    return;
+  }
   state = { checkins: [], favorites: [], wordStatus: {}, reviewMistakes: {} };
   loadState();
   document.getElementById('moduleTitle').textContent = MODULES[mod].name;
