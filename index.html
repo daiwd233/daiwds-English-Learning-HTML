@@ -36,6 +36,9 @@
   .header h1 span { color: var(--primary); }
   .header .sub { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
   .header .today { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+  .module-switcher { display: flex; gap: 6px; justify-content: center; margin: 10px 0 6px; }
+  .module-switcher .module-btn { padding: 4px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); font-size: 13px; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+  .module-switcher .module-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
   .card {
     background: var(--card);
@@ -596,8 +599,13 @@
   <div id="mainApp">
 
     <div class="header">
-      <h1>📚 <span>CET-6</span> 学习</h1>
-      <div class="sub">大学英语六级 · 每日 100 词</div>
+      <h1>📚 <span id="moduleTitle">CET-6</span> 学习</h1>
+      <div class="module-switcher" id="moduleSwitcher">
+        <button class="module-btn" data-module="cet4" onclick="switchModule('cet4')">CET-4</button>
+        <button class="module-btn active" data-module="cet6" onclick="switchModule('cet6')">CET-6</button>
+        <button class="module-btn" data-module="ky" onclick="switchModule('ky')">考研英语</button>
+      </div>
+      <div class="sub" id="moduleSub">大学英语六级 · 每日 100 词</div>
       <div class="today" id="headerDate"></div>
     </div>
 
@@ -725,11 +733,19 @@
   </div>
 </div>
 
+<script src="cet4_words.js"></script>
 <script src="cet6_words.js"></script>
+<script src="ky_words.js"></script>
 <script>
 const WORDS_PER_DAY = 100;
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
+const MODULES = {
+  cet4: { name: 'CET-4', label: '大学英语四级 · 每日 100 词', key: 'eng_learn_cet4', data: WORDS_DATA_CET4 },
+  cet6: { name: 'CET-6', label: '大学英语六级 · 每日 100 词', key: 'eng_learn_cet6', data: WORDS_DATA_CET6 },
+  ky: { name: '考研英语', label: '全国硕士研究生英语 · 每日 100 词', key: 'eng_learn_ky', data: WORDS_DATA_KY },
+};
+let currentModule = 'cet6';
 let VOCABULARY = [];
 let state = { checkins: [], favorites: [], wordStatus: {}, reviewMistakes: {} };
 let displayMonth = null;
@@ -739,9 +755,15 @@ let quizState = { word: null, options: [], answered: false, pool: [] };
 
 // ======================== STORAGE ========================
 
+function loadModulePref() {
+  try { return localStorage.getItem('eng_learn_module') || 'cet6'; } catch(e) { return 'cet6'; }
+}
+function saveModulePref() {
+  try { localStorage.setItem('eng_learn_module', currentModule); } catch(e) {}
+}
 function loadState() {
   try {
-    const raw = localStorage.getItem('eng_learn_cet6');
+    const raw = localStorage.getItem(MODULES[currentModule].key);
     if (raw) {
       const d = JSON.parse(raw);
       state.checkins = d.checkins || [];
@@ -766,7 +788,7 @@ function saveState() {
     reviewMistakes: state.reviewMistakes,
     calCollapsed: state.calCollapsed
   };
-  localStorage.setItem('eng_learn_cet6', JSON.stringify(data));
+  localStorage.setItem(MODULES[currentModule].key, JSON.stringify(data));
 }
 
 function toggleCalendar() {
@@ -821,7 +843,7 @@ function renderHistory() {
   var html = '';
   for (var ci = state.checkins.length - 1; ci >= 0; ci--) {
     var dateStr = state.checkins[ci];
-    var batch = getBatchForDay(ci);
+    var batch = getBatchForDay(ci + 1);
     var dayLabel = '第 ' + (ci + 1) + ' 天';
     html += '<div class="history-date-row">'
       + '<div class="history-date-header" onclick="toggleHistoryDate(this)">'
@@ -1358,17 +1380,40 @@ function showToast(msg, type) {
 
 // ======================== INIT ========================
 
-function init() {
+function switchModule(mod) {
+  if (mod === currentModule) return;
+  saveState();
+  currentModule = mod;
+  saveModulePref();
+  VOCABULARY = MODULES[mod].data;
+  state = { checkins: [], favorites: [], wordStatus: {}, reviewMistakes: {} };
   loadState();
-  VOCABULARY = WORDS_DATA;
+  document.getElementById('moduleTitle').textContent = MODULES[mod].name;
+  document.getElementById('moduleSub').textContent = MODULES[mod].label;
+  document.querySelectorAll('#moduleSwitcher .module-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.module === mod);
+  });
+  refreshAll();
+  showToast('已切换到 ' + MODULES[mod].name, 'success');
+}
+
+function init() {
+  currentModule = loadModulePref();
+  VOCABULARY = MODULES[currentModule].data;
   if (!Array.isArray(VOCABULARY) || VOCABULARY.length === 0) {
     document.body.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#e57373;">'
       + '<div><span style="font-size:48px;">⚠️</span></div>'
       + '<div style="font-size:16px;font-weight:600;margin-top:12px;">词库加载失败</div>'
-      + '<div style="font-size:13px;margin-top:6px;color:var(--text-secondary);">请确认 cet6_words.js 文件存在</div>'
+      + '<div style="font-size:13px;margin-top:6px;color:var(--text-secondary);">请确认词库文件存在</div>'
       + '</div>';
     return;
   }
+  loadState();
+  document.getElementById('moduleTitle').textContent = MODULES[currentModule].name;
+  document.getElementById('moduleSub').textContent = MODULES[currentModule].label;
+  document.querySelectorAll('#moduleSwitcher .module-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.module === currentModule);
+  });
 
   applyCalCollapse();
   const now = new Date();
