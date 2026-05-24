@@ -471,6 +471,67 @@
   }
   .quiz-next:hover { background: var(--primary-dark); }
 
+  /* Study History */
+  .history-card { margin-bottom: 14px; }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .history-header .hh-left { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .history-header .hh-icon { font-size: 12px; color: var(--text-secondary); transition: transform 0.25s; }
+  .history-header .hh-icon.open { transform: rotate(90deg); }
+  .history-body { margin-top: 12px; display: none; }
+  .history-body.open { display: block; }
+  .history-date-row {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .history-date-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s;
+    user-select: none;
+  }
+  .history-date-header:hover { background: var(--primary-light); }
+  .history-date-header .hd-day { font-weight: 600; }
+  .history-date-header .hd-meta { color: var(--text-secondary); font-size: 12px; }
+  .history-date-header .hd-arrow { font-size: 10px; color: #bbb; transition: transform 0.2s; }
+  .history-date-header .hd-arrow.open { transform: rotate(90deg); }
+  .history-words {
+    display: none;
+    padding: 4px 14px 10px;
+    border-top: 1px solid var(--border);
+  }
+  .history-words.open { display: block; }
+  .history-word-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 4px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .history-word-item:last-child { border-bottom: none; }
+  .hw-en { font-weight: 600; }
+  .hw-cn { color: var(--text-secondary); font-size: 12px; }
+  .hw-err { color: var(--danger); font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .history-empty {
+    text-align: center;
+    padding: 30px 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
   /* Data Management */
   .data-mgr {
     display: flex;
@@ -621,6 +682,17 @@
       </div>
     </div>
 
+    <!-- Study History -->
+    <div class="card history-card">
+      <div class="history-header" onclick="toggleHistory()">
+        <span class="hh-left"><span class="icon">📅</span> 学习记录</span>
+        <span class="hh-icon" id="historyIcon">▶</span>
+      </div>
+      <div class="history-body" id="historyBody">
+        <div id="historyContent"></div>
+      </div>
+    </div>
+
     <!-- Data Management -->
     <div class="card">
       <div class="card-title"><span class="icon">💾</span> 数据管理</div>
@@ -717,6 +789,74 @@ function applyCalCollapse() {
 }
 
 // ======================== EXPORT / IMPORT ========================
+
+// ======================== STUDY HISTORY ========================
+
+var historyOpen = false;
+
+function toggleHistory() {
+  historyOpen = !historyOpen;
+  document.getElementById('historyBody').classList.toggle('open', historyOpen);
+  document.getElementById('historyIcon').classList.toggle('open', historyOpen);
+  if (historyOpen) renderHistory();
+}
+
+function getBatchForDay(dayIndex) {
+  var total = VOCABULARY.length;
+  if (total === 0) return [];
+  var start = (dayIndex * WORDS_PER_DAY) % total;
+  var batch = [];
+  for (var i = 0; i < WORDS_PER_DAY; i++) {
+    batch.push(VOCABULARY[(start + i) % total]);
+  }
+  return batch;
+}
+
+function renderHistory() {
+  var container = document.getElementById('historyContent');
+  if (state.checkins.length === 0) {
+    container.innerHTML = '<div class="history-empty">还没有签到记录</div>';
+    return;
+  }
+  var html = '';
+  for (var ci = state.checkins.length - 1; ci >= 0; ci--) {
+    var dateStr = state.checkins[ci];
+    var batch = getBatchForDay(ci);
+    var dayLabel = '第 ' + (ci + 1) + ' 天';
+    html += '<div class="history-date-row">'
+      + '<div class="history-date-header" onclick="toggleHistoryDate(this)">'
+      + '<span><span class="hd-day">' + dateStr + '</span> <span class="hd-meta">' + dayLabel + '</span></span>'
+      + '<span><span class="hd-meta">' + batch.length + ' 词</span> <span class="hd-arrow">▶</span></span>'
+      + '</div>'
+      + '<div class="history-words">';
+    for (var wi = 0; wi < batch.length; wi++) {
+      var w = batch[wi];
+      var errCount = state.reviewMistakes[w.en] || 0;
+      var status = state.wordStatus[w.en];
+      if (!status) {
+        // Word not interacted with - skip or show dimmed
+        html += '<div class="history-word-item" style="opacity:0.4;">'
+          + '<div><span class="hw-en">' + w.en + '</span> <span class="hw-cn">' + w.cn + '</span></div>'
+          + '<span class="hw-err" style="color:#ccc;">未学</span>'
+          + '</div>';
+      } else {
+        html += '<div class="history-word-item">'
+          + '<div><span class="hw-en">' + w.en + '</span> <span class="hw-cn">' + w.cn + '</span></div>'
+          + '<span class="hw-err">' + (errCount > 0 ? '错 ' + errCount + ' 次' : '✓') + '</span>'
+          + '</div>';
+      }
+    }
+    html += '</div></div>';
+  }
+  container.innerHTML = html;
+}
+
+function toggleHistoryDate(el) {
+  var words = el.nextElementSibling;
+  var arrow = el.querySelector('.hd-arrow');
+  words.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
 
 function exportData() {
   const data = {
