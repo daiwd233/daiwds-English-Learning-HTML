@@ -263,6 +263,49 @@
   .word-chip .status-dot.learning { background: var(--accent); }
   .word-chip .status-dot.known { background: var(--success); }
 
+  /* Welcome Modal */
+  .welcome-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .welcome-overlay.open { display: flex; }
+  .welcome-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    padding: 40px 36px 32px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 25px 80px rgba(102,126,234,0.4);
+    text-align: center;
+    animation: welcomeIn 0.5s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .welcome-box::before {
+    content: '';
+    position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 30% 40%, rgba(255,255,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  @keyframes welcomeIn {
+    0% { transform: scale(0.85) translateY(20px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .welcome-box .w-icon { font-size: 52px; margin-bottom: 8px; display: block; }
+  .welcome-box .w-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .welcome-box .w-sub { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 18px; line-height: 1.6; }
+  .welcome-box .w-browsers { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+  .welcome-box .w-browsers span { padding: 5px 14px; border-radius: 20px; background: rgba(255,255,255,0.15); color: #fff; font-size: 13px; font-weight: 500; backdrop-filter: blur(4px); }
+  .welcome-box .w-bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.2); margin: 0 auto; max-width: 200px; overflow: hidden; }
+  .welcome-box .w-bar-fill { height: 100%; width: 100%; background: #fff; border-radius: 2px; animation: barShrink 3s linear forwards; transform-origin: left; }
+  @keyframes barShrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
   /* Word Detail Modal */
   .modal-overlay {
     position: fixed;
@@ -732,6 +775,21 @@
           <button class="m-learning" onclick="markModal('learning')">📖 学习中</button>
           <button class="m-close" onclick="closeModal()">关闭</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div class="welcome-overlay" id="welcomeModal">
+      <div class="welcome-box">
+        <span class="w-icon">📚</span>
+        <div class="w-title">英语学习 · CET</div>
+        <div class="w-sub">由 <strong>daiwd</strong> 开源制作</div>
+        <div class="w-browsers">
+          <span>🌐 Google Chrome</span>
+          <span>🧭 Microsoft Edge</span>
+        </div>
+        <div class="w-sub">推荐使用以上浏览器获得最佳体验</div>
+        <div class="w-bar"><div class="w-bar-fill"></div></div>
       </div>
     </div>
 
@@ -1437,6 +1495,14 @@ function switchModule(mod) {
   showToast('已切换到 ' + MODULES[mod].name, 'success');
 }
 
+function showWelcome() {
+  if (localStorage.getItem('eng_learn_welcomed')) return;
+  localStorage.setItem('eng_learn_welcomed', '1');
+  var el = document.getElementById('welcomeModal');
+  el.classList.add('open');
+  setTimeout(function() { el.classList.remove('open'); }, 3000);
+}
+
 function init() {
   currentModule = loadModulePref();
   VOCABULARY = loadVocab(currentModule);
@@ -1449,6 +1515,7 @@ function init() {
     return;
   }
   loadState();
+  showWelcome();
   document.getElementById('moduleTitle').textContent = MODULES[currentModule].name;
   document.getElementById('moduleSub').textContent = MODULES[currentModule].label;
   document.querySelectorAll('#moduleSwitcher .module-btn').forEach(function(b) {
