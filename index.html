@@ -231,6 +231,11 @@
   .word-grid::-webkit-scrollbar { width: 4px; }
   .word-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+  .speak-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 6px; transition: background 0.2s; }
+  .speak-btn:hover { background: var(--primary-light); }
+  .speak-all-btn { font-size: 12px; margin-left: auto; color: var(--primary); }
+  .speak-mini { font-size: 12px; opacity: 0.5; }
+  .speak-mini:hover { opacity: 1; }
   .word-chip {
     display: flex;
     align-items: center;
@@ -657,6 +662,7 @@
         <div class="daily-badge">
           <span class="info" id="dailyInfo">今日 100 词</span>
           <span class="day-tag" id="dayTag">第 1 天</span>
+          <button class="speak-btn speak-all-btn" onclick="speakAllDaily()" title="朗读今日所有单词">🔊 全部</button>
         </div>
         <input class="daily-search" id="dailySearch" type="text" placeholder="搜索当前组单词..." oninput="renderDailyWords()">
         <div class="word-grid" id="dailyWords"></div>
@@ -1094,6 +1100,28 @@ function changeMonth(delta) {
 
 // ======================== DAILY WORDS ========================
 
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  u.rate = 0.9;
+  window.speechSynthesis.speak(u);
+}
+
+function speakAllDaily() {
+  const batch = getTodayBatch();
+  if (batch.length === 0) { showToast('今日无单词', 'info'); return; }
+  let i = 0;
+  speak(batch[i].en);
+  const timer = setInterval(function() {
+    i++;
+    if (i >= batch.length) { clearInterval(timer); return; }
+    speak(batch[i].en);
+  }, 1800);
+  showToast('朗读中 (' + batch.length + ' 词)', 'info');
+}
+
 function updateDailyBadge() {
   const day = getDayNumber() + 1;
   document.getElementById('dayTag').textContent = '第 ' + day + ' 天';
@@ -1116,9 +1144,11 @@ function renderDailyWords() {
   container.innerHTML = filtered.map(function(w) {
     const status = state.wordStatus[w.en] || 'new';
     const dotClass = status === 'known' ? 'known' : status === 'learning' ? 'learning' : 'new';
-    return '<div class="word-chip" onclick="openWordModal(\'' + w.en.replace(/'/g, "\\'") + '\')">'
+    const enSafe = w.en.replace(/'/g, "\\'");
+    return '<div class="word-chip" onclick="openWordModal(\'' + enSafe + '\')">'
       + '<span class="we">' + w.en + '</span>'
       + '<span style="display:flex;align-items:center;gap:6px;">'
+      + '<button class="speak-btn speak-mini" onclick="event.stopPropagation();speak(\'' + enSafe + '\')" title="朗读">🔊</button>'
       + '<span class="cn-placeholder">查看释义 →</span>'
       + '<span class="status-dot ' + dotClass + '"></span>'
       + '</span></div>';
@@ -1258,7 +1288,7 @@ function showFlashcard() {
   container.innerHTML = '<div class="flashcard-container">'
     + '<div class="flashcard-progress">' + (idx + 1) + ' / ' + pool.length + '</div>'
     + '<div class="flashcard" onclick="flipFlashcard()">'
-    + '<div class="fc-en">' + word.en + '</div>'
+    + '<div class="fc-en">' + word.en + ' <button class="speak-btn" onclick="event.stopPropagation();speak(\'' + word.en.replace(/'/g, "\\'") + '\')" title="朗读">🔊</button></div>'
     + '<div class="fc-cn" id="fcCn">' + word.cn + '</div>'
     + '<div class="fc-hint" id="fcHint">点击翻转</div>'
     + '</div>'
