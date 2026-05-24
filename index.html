@@ -302,9 +302,10 @@
   .welcome-box .w-sub { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 18px; line-height: 1.6; }
   .welcome-box .w-browsers { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
   .welcome-box .w-browsers span { padding: 5px 14px; border-radius: 20px; background: rgba(255,255,255,0.15); color: #fff; font-size: 13px; font-weight: 500; backdrop-filter: blur(4px); }
-  .welcome-box .w-bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.2); margin: 0 auto; max-width: 200px; overflow: hidden; }
-  .welcome-box .w-bar-fill { height: 100%; width: 100%; background: #fff; border-radius: 2px; animation: barShrink 3s linear forwards; transform-origin: left; }
-  @keyframes barShrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+  .w-close { position: absolute; top: 12px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 20px; cursor: pointer; transition: color 0.2s; padding: 4px; line-height: 1; }
+  .w-close:hover { color: #fff; }
+  .w-gotit { padding: 8px 28px; border: none; border-radius: 20px; background: rgba(255,255,255,0.2); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; backdrop-filter: blur(4px); }
+  .w-gotit:hover { background: rgba(255,255,255,0.35); }
 
   /* Word Detail Modal */
   .modal-overlay {
@@ -764,6 +765,11 @@
       </div>
     </div>
 
+    <!-- Footer -->
+    <div style="text-align:center;padding:12px 0 6px;font-size:12px;color:var(--text-secondary);">
+      <a href="https://github.com/daiwd233/daiwds-English-Learning-HTML" target="_blank" style="color:var(--primary);text-decoration:none;">📖 开源地址 · daiwds-English-Learning-HTML</a>
+    </div>
+
     <!-- Word Detail Modal -->
     <div class="modal-overlay" id="wordModal" onclick="closeModal(event)">
       <div class="modal-box" onclick="event.stopPropagation()">
@@ -781,6 +787,7 @@
     <!-- Welcome Modal -->
     <div class="welcome-overlay" id="welcomeModal">
       <div class="welcome-box">
+        <button class="w-close" onclick="closeWelcome()">✕</button>
         <span class="w-icon">📚</span>
         <div class="w-title">英语学习 · CET</div>
         <div class="w-sub">由 <strong>daiwd</strong> 开源制作</div>
@@ -789,7 +796,7 @@
           <span>🧭 Microsoft Edge</span>
         </div>
         <div class="w-sub">推荐使用以上浏览器获得最佳体验</div>
-        <div class="w-bar"><div class="w-bar-fill"></div></div>
+        <div style="margin-top:14px;"><button class="w-gotit" onclick="closeWelcome()">我知道了</button></div>
       </div>
     </div>
 
@@ -1495,12 +1502,14 @@ function switchModule(mod) {
   showToast('已切换到 ' + MODULES[mod].name, 'success');
 }
 
+function closeWelcome() {
+  document.getElementById('welcomeModal').classList.remove('open');
+}
+
 function showWelcome() {
   if (localStorage.getItem('eng_learn_welcomed')) return;
   localStorage.setItem('eng_learn_welcomed', '1');
-  var el = document.getElementById('welcomeModal');
-  el.classList.add('open');
-  setTimeout(function() { el.classList.remove('open'); }, 3000);
+  document.getElementById('welcomeModal').classList.add('open');
 }
 
 function init() {
