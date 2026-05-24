@@ -741,10 +741,16 @@ const WORDS_PER_DAY = 100;
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
 const MODULES = {
-  cet4: { name: 'CET-4', label: '大学英语四级 · 每日 100 词', key: 'eng_learn_cet4', data: WORDS_DATA_CET4 },
-  cet6: { name: 'CET-6', label: '大学英语六级 · 每日 100 词', key: 'eng_learn_cet6', data: WORDS_DATA_CET6 },
-  ky: { name: '考研英语', label: '全国硕士研究生英语 · 每日 100 词', key: 'eng_learn_ky', data: WORDS_DATA_KY },
+  cet4: { name: 'CET-4', label: '大学英语四级 · 每日 100 词', key: 'eng_learn_cet4' },
+  cet6: { name: 'CET-6', label: '大学英语六级 · 每日 100 词', key: 'eng_learn_cet6' },
+  ky: { name: '考研英语', label: '全国硕士研究生英语 · 每日 100 词', key: 'eng_learn_ky' },
 };
+function loadVocab(mod) {
+  if (mod === 'cet4') return Array.isArray(WORDS_DATA_CET4) ? WORDS_DATA_CET4 : [];
+  if (mod === 'cet6') return Array.isArray(WORDS_DATA_CET6) ? WORDS_DATA_CET6 : [];
+  if (mod === 'ky') return Array.isArray(WORDS_DATA_KY) ? WORDS_DATA_KY : [];
+  return [];
+}
 let currentModule = 'cet6';
 let VOCABULARY = [];
 let state = { checkins: [], favorites: [], wordStatus: {}, reviewMistakes: {} };
@@ -1385,7 +1391,7 @@ function switchModule(mod) {
   saveState();
   currentModule = mod;
   saveModulePref();
-  VOCABULARY = MODULES[mod].data;
+  VOCABULARY = loadVocab(mod);
   state = { checkins: [], favorites: [], wordStatus: {}, reviewMistakes: {} };
   loadState();
   document.getElementById('moduleTitle').textContent = MODULES[mod].name;
@@ -1399,7 +1405,7 @@ function switchModule(mod) {
 
 function init() {
   currentModule = loadModulePref();
-  VOCABULARY = MODULES[currentModule].data;
+  VOCABULARY = loadVocab(currentModule);
   if (!Array.isArray(VOCABULARY) || VOCABULARY.length === 0) {
     document.body.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#e57373;">'
       + '<div><span style="font-size:48px;">⚠️</span></div>'
