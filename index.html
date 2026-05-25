@@ -559,6 +559,35 @@
   .history-date-header .hd-meta { color: var(--text-secondary); font-size: 12px; }
   .history-date-header .hd-arrow { font-size: 10px; color: #bbb; transition: transform 0.2s; }
   .history-date-header .hd-arrow.open { transform: rotate(90deg); }
+  .hd-review-btn { padding: 3px 10px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); font-size: 12px; color: var(--primary); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .hd-review-btn:hover { background: var(--primary-light); border-color: var(--primary); }
+  .day-review-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 998; display: none; align-items: center; justify-content: center; padding: 24px; }
+  .day-review-overlay.open { display: flex; }
+  .day-review-box { background: var(--card); border-radius: 20px; padding: 28px 24px 20px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.15); animation: modalIn 0.2s ease; }
+  .day-review-box .dr-title { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+  .day-review-box .dr-sub { font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 16px; }
+  .day-review-box .dr-progress { font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 10px; }
+  .day-review-box .dr-fc { background: var(--bg); border-radius: 14px; padding: 32px 20px; text-align: center; cursor: pointer; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid transparent; transition: border 0.2s; user-select: none; }
+  .day-review-box .dr-fc:hover { border-color: var(--primary-light); }
+  .day-review-box .dr-fc-en { font-size: 24px; font-weight: 700; }
+  .day-review-box .dr-fc-cn { font-size: 16px; color: var(--primary); margin-top: 10px; opacity: 0; transition: opacity 0.3s; }
+  .day-review-box .dr-fc-cn.show { opacity: 1; }
+  .day-review-box .dr-fc-hint { font-size: 12px; color: var(--text-secondary); margin-top: 12px; }
+  .day-review-box .dr-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+  .day-review-box .dr-actions button { padding: 9px 24px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; min-width: 90px; }
+  .day-review-box .dr-actions button:active { transform: scale(0.96); }
+  .day-review-btn-forgot { background: #fde8e8; color: var(--danger); }
+  .day-review-btn-remember { background: #e8f5ee; color: var(--success); }
+  .day-review-box .dr-actions button:disabled { opacity: 0.4; cursor: default; }
+  .day-review-box .dr-close { display: block; margin: 14px auto 0; padding: 8px 24px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); cursor: pointer; font-size: 13px; color: var(--text-secondary); transition: all 0.2s; }
+  .day-review-box .dr-close:hover { border-color: var(--primary); color: var(--primary); }
+  .day-review-box .dr-done { text-align: center; padding: 16px 0; }
+  .day-review-box .dr-done .dr-done-icon { font-size: 40px; margin-bottom: 6px; }
+  .day-review-box .dr-done .dr-done-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .day-review-box .dr-done-stats { display: flex; gap: 20px; justify-content: center; margin: 10px 0; }
+  .day-review-box .dr-done-stats .num { font-size: 18px; font-weight: 700; }
+  .day-review-box .dr-done-stats .num.g { color: var(--success); }
+  .day-review-box .dr-done-stats .num.r { color: var(--danger); }
   .history-words {
     display: none;
     padding: 4px 14px 10px;
@@ -784,6 +813,11 @@
       </div>
     </div>
 
+    <!-- Day Review Modal -->
+    <div class="day-review-overlay" id="dayReviewModal">
+      <div class="day-review-box" id="dayReviewBox"></div>
+    </div>
+
     <!-- Welcome Modal -->
     <div class="welcome-overlay" id="welcomeModal">
       <div class="welcome-box">
@@ -922,18 +956,20 @@ function renderHistory() {
     var dateStr = state.checkins[ci];
     var batch = getBatchForDay(ci + 1);
     var dayLabel = '第 ' + (ci + 1) + ' 天';
+    var batchJson = JSON.stringify(batch).replace(/'/g, "\\'");
     html += '<div class="history-date-row">'
       + '<div class="history-date-header" onclick="toggleHistoryDate(this)">'
       + '<span><span class="hd-day">' + dateStr + '</span> <span class="hd-meta">' + dayLabel + '</span></span>'
-      + '<span><span class="hd-meta">' + batch.length + ' 词</span> <span class="hd-arrow">▶</span></span>'
-      + '</div>'
+      + '<span style="display:flex;align-items:center;gap:8px;">'
+      + '<button class="hd-review-btn" onclick="event.stopPropagation();openDayReview(' + ci + ')" title="复习这一天">🔄 复习</button>'
+      + '<span class="hd-meta">' + batch.length + ' 词</span> <span class="hd-arrow">▶</span>'
+      + '</span></div>'
       + '<div class="history-words">';
     for (var wi = 0; wi < batch.length; wi++) {
       var w = batch[wi];
       var errCount = state.reviewMistakes[w.en] || 0;
       var status = state.wordStatus[w.en];
       if (!status) {
-        // Word not interacted with - skip or show dimmed
         html += '<div class="history-word-item" style="opacity:0.4;">'
           + '<div><span class="hw-en">' + w.en + '</span> <span class="hw-cn">' + w.cn + '</span></div>'
           + '<span class="hw-err" style="color:#ccc;">未学</span>'
@@ -955,6 +991,89 @@ function toggleHistoryDate(el) {
   var arrow = el.querySelector('.hd-arrow');
   words.classList.toggle('open');
   arrow.classList.toggle('open');
+}
+
+var dayReviewState = { pool: [], idx: 0, flipped: false, remembered: 0, forgotten: 0, done: false };
+
+function openDayReview(ci) {
+  var batch = getBatchForDay(ci + 1);
+  if (!batch || batch.length === 0) { showToast('该日期无单词', 'info'); return; }
+  dayReviewState.pool = batch.slice().sort(function() { return Math.random() - 0.5; });
+  dayReviewState.idx = 0;
+  dayReviewState.flipped = false;
+  dayReviewState.remembered = 0;
+  dayReviewState.forgotten = 0;
+  dayReviewState.done = false;
+  document.getElementById('dayReviewModal').classList.add('open');
+  renderDayReview();
+}
+
+function closeDayReview() {
+  document.getElementById('dayReviewModal').classList.remove('open');
+}
+
+function renderDayReview() {
+  var box = document.getElementById('dayReviewBox');
+  var s = dayReviewState;
+  var dateStr = state.checkins[state.checkins.length - 1 - s.pool.length + 1] || '';
+  var titleEl = '<div class="dr-title">📅 往期复习</div>';
+  var subEl = '<div class="dr-sub">' + (dateStr || '') + ' · 共 ' + s.pool.length + ' 词</div>';
+
+  if (s.done) {
+    var total = s.remembered + s.forgotten;
+    var pct = total ? Math.round(s.remembered / total * 100) : 0;
+    box.innerHTML = titleEl + subEl
+      + '<div class="dr-done"><div class="dr-done-icon">🎉</div>'
+      + '<div class="dr-done-title">复习完成！</div>'
+      + '<div class="dr-done-stats"><div><div class="num g">' + s.remembered + '</div><div style="font-size:12px;color:var(--text-secondary);">记得</div></div><div><div class="num r">' + s.forgotten + '</div><div style="font-size:12px;color:var(--text-secondary);">忘了</div></div></div>'
+      + '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">正确率 ' + pct + '%</div>'
+      + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button class="dr-close" onclick="openDayReview(' + (state.checkins.length) + ')" style="margin:0;">再来一轮</button><button class="dr-close" onclick="closeDayReview()" style="margin:0;">关闭</button></div></div>';
+    return;
+  }
+
+  if (s.idx >= s.pool.length) {
+    s.done = true;
+    renderDayReview();
+    return;
+  }
+
+  var word = s.pool[s.idx];
+  box.innerHTML = titleEl + subEl
+    + '<div class="dr-progress">' + (s.idx + 1) + ' / ' + s.pool.length + '</div>'
+    + '<div class="dr-fc" onclick="flipDayReview()">'
+    + '<div class="dr-fc-en">' + word.en + ' <button class="speak-btn" onclick="event.stopPropagation();speak(\'' + word.en.replace(/'/g, "\\'") + '\')" title="朗读">🔊</button></div>'
+    + '<div class="dr-fc-cn" id="drFcCn">' + word.cn + '</div>'
+    + '<div class="dr-fc-hint" id="drFcHint">点击翻转查看释义</div>'
+    + '</div>'
+    + '<div class="dr-actions"><button class="day-review-btn-forgot" id="drForgot" onclick="dayReviewAnswer(false)" disabled>忘了</button><button class="day-review-btn-remember" id="drRemember" onclick="dayReviewAnswer(true)" disabled>记得</button></div>'
+    + '<button class="dr-close" onclick="closeDayReview()">关闭</button>';
+}
+
+function flipDayReview() {
+  if (dayReviewState.done) return;
+  dayReviewState.flipped = true;
+  document.getElementById('drFcCn').classList.add('show');
+  document.getElementById('drFcHint').textContent = '';
+  document.getElementById('drForgot').disabled = false;
+  document.getElementById('drRemember').disabled = false;
+}
+
+function dayReviewAnswer(remembered) {
+  if (!dayReviewState.flipped) return;
+  var word = dayReviewState.pool[dayReviewState.idx];
+  if (word) {
+    state.wordStatus[word.en] = remembered ? 'known' : 'learning';
+  }
+  if (remembered) {
+    dayReviewState.remembered++;
+  } else {
+    dayReviewState.forgotten++;
+    state.reviewMistakes[word.en] = (state.reviewMistakes[word.en] || 0) + 1;
+  }
+  saveState();
+  dayReviewState.idx++;
+  updateCheckinUI();
+  renderDayReview();
 }
 
 function exportData() {
